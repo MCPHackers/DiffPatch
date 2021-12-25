@@ -1,13 +1,10 @@
 package codechicken.diffpatch.match;
 
-import it.unimi.dsi.fastutil.ints.AbstractInt2IntMap;
-import it.unimi.dsi.fastutil.ints.Int2IntMap;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
-
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class PatienceMatch {
 
@@ -37,9 +34,9 @@ public class PatienceMatch {
 
         // step 3: match up common unique lines
         boolean any = false;
-        for (Int2IntMap.Entry entry : lcsUnique(start1, end1, start2, end2)) {
-            int m1 = entry.getIntKey();
-            int m2 = entry.getIntValue();
+        for (Map.Entry<Integer, Integer> entry : lcsUnique(start1, end1, start2, end2)) {
+            int m1 = entry.getKey();
+            int m2 = entry.getValue();
             matches[m1] = m2;
             any = true;
 
@@ -80,9 +77,9 @@ public class PatienceMatch {
         return match();
     }
 
-    private final IntList subChars = new IntArrayList();
+    private final List<Integer> subChars = new ArrayList<Integer>();
 
-    private List<Int2IntMap.Entry> lcsUnique(int start1, int end1, int start2, int end2) {
+    private List<Map.Entry> lcsUnique(int start1, int end1, int start2, int end2) {
         //identify all the unique chars in chars1
         for (int i = start1; i < end1; i++) {
             int c = chars1.charAt(i);
@@ -106,8 +103,8 @@ public class PatienceMatch {
         }
 
         //extract common unique subsequences
-        IntList common1 = new IntArrayList();
-        IntList common2 = new IntArrayList();
+        List common1 = new ArrayList();
+        List common2 = new ArrayList();
         for (int i : subChars) {
             if (unique1[i] >= 0 && unique2[i] >= 0) {
                 common1.add(unique1[i]);
@@ -120,18 +117,18 @@ public class PatienceMatch {
         if (common2.size() == 0) {
             return Collections.emptyList();
         }
-        List<Int2IntMap.Entry> ret = new ArrayList<>();
+        List<Map.Entry> ret = new ArrayList<>();
 
         // repose the longest common subsequence as longest ascending subsequence
         // note that common2 is already sorted by order of appearance in file1 by of char allocation
         for (int i : lasIndices(common2)) {
-            ret.add(new AbstractInt2IntMap.BasicEntry(common1.getInt(i), common2.getInt(i)));
+            ret.add(new AbstractMap.SimpleEntry(common1.get(i), common2.get(i)));
         }
         return ret;
     }
 
     //https://en.wikipedia.org/wiki/Patience_sorting
-    public static int[] lasIndices(IntList sequence) {
+    public static int[] lasIndices(List<Integer> sequence) {
         if (sequence.size() == 0) {
             return new int[0];
         }
@@ -139,14 +136,14 @@ public class PatienceMatch {
         List<LCANode> pileTops = new ArrayList<>();
         pileTops.add(new LCANode(0, null));
         for (int i = 1; i < sequence.size(); i++) {
-            int v = sequence.getInt(i);
+            int v = sequence.get(i);
 
             //binary search for the first pileTop > v
             int a = 0;
             int b = pileTops.size();
             while (a != b) {
                 int c = (a + b) / 2;
-                if (sequence.getInt(pileTops.get(c).value) > v) {
+                if (sequence.get(pileTops.get(c).value) > v) {
                     b = c;
                 } else {
                     a = c + 1;

@@ -1,10 +1,8 @@
 package codechicken.diffpatch.util;
 
-import it.unimi.dsi.fastutil.objects.Object2CharMap;
-import it.unimi.dsi.fastutil.objects.Object2CharOpenHashMap;
-
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -14,10 +12,10 @@ import java.util.List;
 public class CharRepresenter {
 
     private final List<String> charToLine = new ArrayList<>();
-    private final Object2CharMap<String> lineToChar = new Object2CharOpenHashMap<>();
+    private final CharMap lineToChar = new CharMap();
 
     private final List<String> charToWord = new ArrayList<>();
-    private final Object2CharMap<String> wordToChar = new Object2CharOpenHashMap<>();
+    private final CharMap wordToChar = new CharMap();
 
     public CharRepresenter() {
         charToLine.add("\0");//lets avoid the 0 char
@@ -95,6 +93,17 @@ public class CharRepresenter {
 
     public int getMaxWordChar() {
         return charToWord.size();
+    }
+    
+    private class CharMap extends HashMap<String, Character> {
+        public char computeCharIfAbsent(final String key, final java.util.function.ToIntFunction<? super String> mappingFunction) {
+            java.util.Objects.requireNonNull(mappingFunction);
+            final char v = get(key);
+            if (v != 0 || containsKey(key))
+                return v;
+            put(key, v);
+            return v;
+        }
     }
 
 }

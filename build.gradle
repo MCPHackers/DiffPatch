@@ -52,7 +52,6 @@ configurations {
 }
 
 dependencies {
-    shadow 'it.unimi.dsi:fastutil:8.3.1'
     shadow 'org.apache.commons:commons-lang3:3.9'
     shadow 'org.apache.commons:commons-compress:1.18'
     shadow 'org.tukaani:xz:1.8'

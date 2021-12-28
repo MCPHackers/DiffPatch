@@ -68,20 +68,6 @@ test {
     useJUnitPlatform()
 }
 
-signing {
-    if (!signProps.empty) {
-        jars {
-            sign jar
-            sign shadowJar
-
-            keyStore = signProps.keyStore
-            alias = signProps.alias
-            storePass = signProps.storePass
-            keyPass = signProps.keyPass
-        }
-    }
-}
-
 def commonManifest = {
     attributes 'Main-Class': 'codechicken.diffpatch.DiffPatch'
 }

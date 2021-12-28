@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Converts Equal lines into equal single characters
@@ -12,10 +13,10 @@ import java.util.List;
 public class CharRepresenter {
 
     private final List<String> charToLine = new ArrayList<>();
-    private final CharMap lineToChar = new CharMap();
+    private final Map lineToChar = new HashMap<String, Character>();
 
     private final List<String> charToWord = new ArrayList<>();
-    private final CharMap wordToChar = new CharMap();
+    private final Map wordToChar = new HashMap<String, Character>();
 
     public CharRepresenter() {
         charToLine.add("\0");//lets avoid the 0 char
@@ -31,7 +32,7 @@ public class CharRepresenter {
     }
 
     public char addLine(String line) {
-        return lineToChar.computeCharIfAbsent(line, e -> {
+        return (char)lineToChar.computeIfAbsent(line, e -> {
             charToLine.add(line);
             return (char) (charToLine.size() - 1);
         });
@@ -42,7 +43,7 @@ public class CharRepresenter {
             return word.charAt(0);
         }
 
-        return wordToChar.computeCharIfAbsent(word, e -> {
+        return (char)wordToChar.computeIfAbsent(word, e -> {
             charToWord.add(word);
             return (char) (charToWord.size() - 1);
         });
@@ -93,17 +94,6 @@ public class CharRepresenter {
 
     public int getMaxWordChar() {
         return charToWord.size();
-    }
-    
-    private class CharMap extends HashMap<String, Character> {
-        public char computeCharIfAbsent(final String key, final java.util.function.ToIntFunction<? super String> mappingFunction) {
-            java.util.Objects.requireNonNull(mappingFunction);
-            final char v = get(key);
-            if (v != 0 || containsKey(key))
-                return v;
-            put(key, v);
-            return v;
-        }
     }
 
 }

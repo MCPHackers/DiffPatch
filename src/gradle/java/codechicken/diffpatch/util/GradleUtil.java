@@ -1,6 +1,5 @@
 package codechicken.diffpatch.util;
 
-import codechicken.diffpatch.util.archiver.ArchiveFormat;
 import groovy.lang.Closure;
 import org.gradle.api.Project;
 
@@ -39,23 +38,5 @@ public class GradleUtil {
             }
         }
         throw new IllegalArgumentException("Unable to parse PatchMode, Unknown value: " + value.toString());
-    }
-
-    public static ArchiveFormat resolveArchiveFormat(Object value) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
-        if (value instanceof ArchiveFormat) {
-            return (ArchiveFormat) value;
-        }
-        if (value instanceof CharSequence) {
-            String upper = value.toString().toUpperCase(Locale.ROOT);
-            try {
-                return ArchiveFormat.valueOf(upper);
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Unknown ArchiveFormat String value: " + value.toString());
-            }
-        }
-        throw new IllegalArgumentException("Unable to parse ArchiveFormat, Unknown value: " + value.toString());
     }
 }

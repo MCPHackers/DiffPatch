@@ -1,7 +1,5 @@
 package codechicken.diffpatch.util;
 
-import codechicken.diffpatch.util.archiver.ArchiveFormat;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,24 +77,14 @@ public abstract class InputPath {
      */
     public abstract String getName();
 
-    /**
-     * Gets the ArchiveFormat of this input.
-     * May be null indicating raw file or path.
-     *
-     * @return The format.
-     */
-    public abstract ArchiveFormat getFormat();
-
     public static class FilePath extends InputPath {
 
         private final Path path;
-        private final ArchiveFormat format;
         private final OpenOption[] opts;
 
-        public FilePath(Path path, ArchiveFormat format, OpenOption... opts) {
+        public FilePath(Path path, OpenOption... opts) {
             super(PathType.PATH);
             this.path = path;
-            this.format = format;
             this.opts = opts;
         }
 
@@ -129,22 +117,15 @@ public abstract class InputPath {
         public String getName() {
             return path.getFileName().toString();
         }
-
-        @Override
-        public ArchiveFormat getFormat() {
-            return format;
-        }
     }
 
     public static class PipePath extends InputPath {
 
         private final InputStream pipe;
-        private final ArchiveFormat format;
 
-        public PipePath(InputStream pipe, ArchiveFormat format) {
+        public PipePath(InputStream pipe) {
             super(PathType.PIPE);
             this.pipe = pipe;
-            this.format = format;
         }
 
         @Override
@@ -157,11 +138,6 @@ public abstract class InputPath {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(open()))) {
                 return reader.lines().collect(Collectors.toList());
             }
-        }
-
-        @Override
-        public ArchiveFormat getFormat() {
-            return format;
         }
 
         @Override
@@ -195,7 +171,6 @@ public abstract class InputPath {
         @Override public InputStream open() { throw new UnsupportedOperationException(); }
         @Override public List<String> readAllLines() { throw new UnsupportedOperationException();  }
         @Override public String getName() { throw new UnsupportedOperationException(); }
-        @Override public ArchiveFormat getFormat() { throw new UnsupportedOperationException(); }
     }
     //@formatter:on
 

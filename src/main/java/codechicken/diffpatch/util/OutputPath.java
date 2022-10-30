@@ -1,7 +1,5 @@
 package codechicken.diffpatch.util;
 
-import codechicken.diffpatch.util.archiver.ArchiveFormat;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -68,18 +66,14 @@ public abstract class OutputPath {
      */
     public abstract String getName();
 
-    public abstract ArchiveFormat getFormat();
-
     public static class FilePath extends OutputPath {
 
         private final Path path;
-        private final ArchiveFormat format;
         private final OpenOption[] opts;
 
-        public FilePath(Path path, ArchiveFormat format, OpenOption... opts) {
+        public FilePath(Path path, OpenOption... opts) {
             super(PathType.PATH);
             this.path = path.toAbsolutePath();
-            this.format = format;
             this.opts = opts;
         }
 
@@ -110,32 +104,20 @@ public abstract class OutputPath {
         public String getName() {
             return path.getFileName().toString();
         }
-
-        @Override
-        public ArchiveFormat getFormat() {
-            return format;
-        }
     }
 
     public static class PipePath extends OutputPath {
 
         private final OutputStream pipe;
-        private final ArchiveFormat format;
 
-        public PipePath(OutputStream pipe, ArchiveFormat format) {
+        public PipePath(OutputStream pipe) {
             super(PathType.PIPE);
             this.pipe = pipe;
-            this.format = format;
         }
 
         @Override
         public OutputStream open() {
             return Utils.protectClose(pipe);
-        }
-
-        @Override
-        public ArchiveFormat getFormat() {
-            return format;
         }
 
         @Override
@@ -168,7 +150,6 @@ public abstract class OutputPath {
         @Override public Path toPath() { throw new UnsupportedOperationException(); }
         @Override public OutputStream open() { throw new UnsupportedOperationException(); }
         @Override public String getName() { throw new UnsupportedOperationException(); }
-        @Override public ArchiveFormat getFormat() { throw new UnsupportedOperationException(); }
     }
     //@formatter:on
 

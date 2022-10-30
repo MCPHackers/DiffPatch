@@ -79,7 +79,7 @@ public class PatienceMatch {
 
     private final List<Integer> subChars = new ArrayList<Integer>();
 
-    private List<Map.Entry> lcsUnique(int start1, int end1, int start2, int end2) {
+    private List<Map.Entry<Integer, Integer>> lcsUnique(int start1, int end1, int start2, int end2) {
         //identify all the unique chars in chars1
         for (int i = start1; i < end1; i++) {
             int c = chars1.charAt(i);
@@ -103,8 +103,8 @@ public class PatienceMatch {
         }
 
         //extract common unique subsequences
-        List common1 = new ArrayList();
-        List common2 = new ArrayList();
+        List<Integer> common1 = new ArrayList<>();
+        List<Integer> common2 = new ArrayList<>();
         for (int i : subChars) {
             if (unique1[i] >= 0 && unique2[i] >= 0) {
                 common1.add(unique1[i]);
@@ -117,12 +117,12 @@ public class PatienceMatch {
         if (common2.size() == 0) {
             return Collections.emptyList();
         }
-        List<Map.Entry> ret = new ArrayList<>();
+        List<Map.Entry<Integer, Integer>> ret = new ArrayList<>();
 
         // repose the longest common subsequence as longest ascending subsequence
         // note that common2 is already sorted by order of appearance in file1 by of char allocation
         for (int i : lasIndices(common2)) {
-            ret.add(new AbstractMap.SimpleEntry(common1.get(i), common2.get(i)));
+            ret.add(new AbstractMap.SimpleEntry<>(common1.get(i), common2.get(i)));
         }
         return ret;
     }

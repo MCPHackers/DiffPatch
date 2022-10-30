@@ -13,10 +13,10 @@ import java.util.Map;
 public class CharRepresenter {
 
     private final List<String> charToLine = new ArrayList<>();
-    private final Map lineToChar = new HashMap<String, Character>();
+    private final Map<String, Character> lineToChar = new HashMap<>();
 
     private final List<String> charToWord = new ArrayList<>();
-    private final Map wordToChar = new HashMap<String, Character>();
+    private final Map<String, Character> wordToChar = new HashMap<>();
 
     public CharRepresenter() {
         charToLine.add("\0");//lets avoid the 0 char
@@ -32,7 +32,7 @@ public class CharRepresenter {
     }
 
     public char addLine(String line) {
-        return (char)lineToChar.computeIfAbsent(line, e -> {
+        return lineToChar.computeIfAbsent(line, e -> {
             charToLine.add(line);
             return (char) (charToLine.size() - 1);
         });
@@ -43,7 +43,7 @@ public class CharRepresenter {
             return word.charAt(0);
         }
 
-        return (char)wordToChar.computeIfAbsent(word, e -> {
+        return wordToChar.computeIfAbsent(word, e -> {
             charToWord.add(word);
             return (char) (charToWord.size() - 1);
         });

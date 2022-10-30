@@ -13,6 +13,8 @@ import java.util.stream.Stream;
  * Created by covers1624 on 19/7/20.
  */
 public class Utils {
+	
+    public static final String DEV_NULL = "/dev/null";
 
     //32k buffer.
     private static final ThreadLocal<byte[]> bufferCache = ThreadLocal.withInitial(() -> new byte[32 * 1024]);

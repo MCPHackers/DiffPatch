@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.apache.commons.lang3.StringUtils.removeStart;
+
 /**
  * Represents a singular Patch file.
  */
@@ -19,8 +21,90 @@ public class PatchFile {
     public boolean noNewLine;
 
     public List<Patch> patches = new ArrayList<>();
+    
+    public String getBasePath(String prefix) {
+    	return removeStart(basePath, prefix);
+    }
+    public String getPatchedPath(String prefix) {
+    	return removeStart(patchedPath, prefix);
+    }
+    
+    public static List<PatchFile> fromLines(String name, List<String> lines, boolean verifyHeaders) {
+    	List<PatchFile> list = new ArrayList<>();
 
-    public static PatchFile fromLines(String name, List<String> lines, boolean verifyHeaders) {
+        int delta = 0;
+        int i = 0;
+        PatchFile patchFile = null;
+        Patch patch = null;
+        for (String line : lines) {
+            i++;
+
+            //ignore blank lines
+            if (line.isEmpty()) {
+                continue;
+            }
+
+            //context
+            if (line.startsWith("--- ")) {
+            	if(patchFile != null) list.add(patchFile);
+            	patchFile = new PatchFile();
+            	patch = null;
+                delta = 0;
+            	patchFile.name = name;
+                patchFile.basePath = line.substring(4);
+                continue;
+            } else if (line.startsWith("+++ ")) {
+                patchFile.patchedPath = line.substring(4);
+                continue;
+            }
+
+            switch (line.charAt(0)) {
+                case '@': {
+                    Matcher matcher = HUNK_OFFSET.matcher(line);
+                    if (!matcher.find()) {
+                        throw new IllegalArgumentException(String.format("Invalid patch line in '%s' at %s:'%s'", name, i, line));
+                    }
+                    patch = new Patch();
+                    patch.start1 = Integer.parseInt(matcher.group(1)) - 1;
+                    patch.length1 = Integer.parseInt(matcher.group(2));
+                    patch.length2 = Integer.parseInt(matcher.group(4));
+
+                    String start2Str = matcher.group(3);
+                    if (start2Str.equals("_")) {
+                        patch.start2 = patch.start1 + delta;
+                    } else {
+                        patch.start2 = Integer.parseInt(start2Str) - 1;
+                        if (verifyHeaders && patch.start2 != patch.start1 + delta) {
+                            throw new IllegalArgumentException(String.format("Applied Offset Mismatch in '%s' at %s. Expected: %d, Actual: %d", name, i, patch.start1 + delta + 1, patch.start2 + 1));
+                        }
+                    }
+                    delta += patch.length2 - patch.length1;
+                    patchFile.patches.add(patch);
+                    break;
+                }
+                case ' ':
+                    patch.diffs.add(new Diff(Operation.EQUAL, line.substring(1)));
+                    break;
+                case '+':
+                    patch.diffs.add(new Diff(Operation.INSERT, line.substring(1)));
+                    break;
+                case '-':
+                    patch.diffs.add(new Diff(Operation.DELETE, line.substring(1)));
+                    break;
+                case '\\':
+                    if (line.equals(NO_NEW_LINE)) {
+                        patchFile.noNewLine = true;
+                        break;
+                    }
+                default:
+                    throw new IllegalArgumentException(String.format("Invalid patch line in '%s' at %s:'%s'", line, i, line));
+            }
+        }
+    	if(patchFile != null) list.add(patchFile);
+    	return list;
+    }
+
+    public static PatchFile fromLinesSingle(String name, List<String> lines, boolean verifyHeaders) {
         PatchFile patchFile = new PatchFile();
         patchFile.name = name;
         Patch patch = null;

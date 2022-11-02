@@ -1,5 +1,7 @@
 package codechicken.diffpatch;
 
+import static codechicken.diffpatch.util.Utils.*;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,12 +10,13 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -27,8 +30,6 @@ import codechicken.diffpatch.util.OutputPath;
 import codechicken.diffpatch.util.PatchFile;
 import codechicken.diffpatch.util.Utils;
 
-import static codechicken.diffpatch.util.Utils.*;
-
 /**
  * Handles doing a Diff operation from the CLI.
  * <p>
@@ -36,9 +37,7 @@ import static codechicken.diffpatch.util.Utils.*;
  */
 public class DiffOperation {
 
-    public static final String DEV_NULL = "/dev/null";
-
-    private final DiffSummary summary = new DiffSummary();
+    private DiffSummary summary;
 	private final boolean verbose;
     private final InputPath aPath;
     private final InputPath bPath;
@@ -47,8 +46,11 @@ public class DiffOperation {
     private final boolean autoHeader;
     private final int context;
     private final OutputPath outputPath;
+    private final PathFilter filter;
+    private final String lineSeparator;
+	private final boolean single;
 
-    public DiffOperation(boolean verbose, InputPath aPath, InputPath bPath, String aPrefix, String bPrefix, boolean autoHeader, int context, OutputPath outputPath) {
+    public DiffOperation(boolean verbose, InputPath aPath, InputPath bPath, String aPrefix, String bPrefix, boolean autoHeader, int context, OutputPath outputPath, PathFilter filter, String lineSeparator, boolean single) {
         this.verbose = verbose;
     	this.aPath = aPath;
         this.bPath = bPath;
@@ -57,6 +59,9 @@ public class DiffOperation {
         this.autoHeader = autoHeader;
         this.context = context;
         this.outputPath = outputPath;
+        this.filter = filter;
+        this.lineSeparator = lineSeparator;
+        this.single = single;
     }
 
     public static Builder builder() {
@@ -73,7 +78,7 @@ public class DiffOperation {
             if (!lines.isEmpty()) {
                 changes = true;
                 try (PrintWriter out = new PrintWriter(outputPath.open())) {
-                    out.println(String.join(System.lineSeparator(), lines) + System.lineSeparator());
+                    out.println(String.join(lineSeparator, lines) + lineSeparator);
                 }
             }
             return changes;
@@ -81,7 +86,15 @@ public class DiffOperation {
             //Both inputs are directories.
             Map<String, Path> aIndex = indexChildren(aPath.toPath());
             Map<String, Path> bIndex = indexChildren(bPath.toPath());
-            doDiff(patches, summary, aIndex.keySet(), bIndex.keySet(), e -> Files.readAllLines(aIndex.get(e)), e -> Files.readAllLines(bIndex.get(e)), context, autoHeader);
+            List<String> diff = doDiff(patches, summary, aIndex.keySet(), bIndex.keySet(), e -> Files.readAllLines(aIndex.get(e)), e -> Files.readAllLines(bIndex.get(e)), context, autoHeader);
+            if(single) {
+            	Files.deleteIfExists(outputPath.toPath());
+            	if(!diff.isEmpty()) {
+                    Files.write(makeParentDirs(outputPath.toPath()), diff);
+                	return true;
+            	}
+            	return false;
+            }
         } else {
         	//Inputs are a directory and a file
         	return false;
@@ -89,80 +102,46 @@ public class DiffOperation {
         boolean changes = false;
         if (!patches.isEmpty()) {
             changes = true;
-            if (outputPath.getType().isPipe()) {
-                try (PrintWriter out = new PrintWriter(outputPath.open())) {
-                    for (List<String> lines : patches.values()) {
-                        lines.forEach(out::println);
-                    }
-                }
-            } else {
-                if (Files.exists(outputPath.toPath())) {
-                    Utils.deleteFolder(outputPath.toPath());
-                }
-                for (Map.Entry<String, List<String>> entry : patches.get().entrySet()) {
-                    Path path = outputPath.toPath().resolve(entry.getKey());
-                    Files.write(makeParentDirs(path), entry.getValue());
-                }
+            if (Files.exists(outputPath.toPath())) {
+                Utils.deleteFolder(outputPath.toPath());
+            }
+            for (Map.Entry<String, List<String>> entry : patches.get().entrySet()) {
+                Path path = outputPath.toPath().resolve(entry.getKey());
+                Files.write(makeParentDirs(path), entry.getValue());
             }
         }
+        this.summary = summary;
         return changes;
     }
 
-    public void doDiff(FileCollector patches, DiffSummary summary, Set<String> aEntries, Set<String> bEntries, LinesReader aFunc, LinesReader bFunc, int context, boolean autoHeader) {
-        List<String> added = bEntries.stream().filter(e -> !aEntries.contains(e)).sorted().collect(Collectors.toList());
-        List<String> common = aEntries.stream().filter(bEntries::contains).sorted().collect(Collectors.toList());
-        List<String> removed = aEntries.stream().filter(e -> !bEntries.contains(e)).sorted().collect(Collectors.toList());
+    public List<String> doDiff(FileCollector patches, DiffSummary summary, Set<String> aEntries, Set<String> bEntries, LinesReader aFunc, LinesReader bFunc, int context, boolean autoHeader) {
+        Set<String> files = new HashSet<>(aEntries);
+        files.addAll(bEntries);
         String aPrefix = this.aPrefix == null ? "" : StringUtils.appendIfMissing(this.aPrefix.isEmpty() ? "a" : this.aPrefix, "/");
         String bPrefix = this.bPrefix == null ? "" : StringUtils.appendIfMissing(this.bPrefix.isEmpty() ? "b" : this.bPrefix, "/");
-        for (String file : added) {
+
+        List<String> allPatchLines = new ArrayList<>();
+        for (String file : files) {
+        	if(!filter.apply(file)) {
+        		continue;
+        	}
             try {
-                String bName = bPrefix + StringUtils.removeStart(file, "/");
-                List<String> aLines = Collections.emptyList();
-                List<String> bLines = bFunc.apply(file);
-                List<String> patchLines = doDiff(summary, null, bName, aLines, bLines, context, autoHeader);
-                if (!patchLines.isEmpty()) {
-                    summary.addedFiles++;
-                    patches.consume(file + ".patch", patchLines);
-                } else {
-                    summary.unchangedFiles++;
-                }
-            } catch (IOException e) {
-                verbose("Failed to read file: %s", file);
-            }
-        }
-        for (String file : common) {
-            try {
-                String aName = aPrefix + StringUtils.removeStart(file, "/");
-                String bName = bPrefix + StringUtils.removeStart(file, "/");
-                List<String> aLines = aFunc.apply(file);
-                List<String> bLines = bFunc.apply(file);
+            	boolean hasA = aEntries.contains(file);
+            	boolean hasB = bEntries.contains(file);
+                String aName = hasA ? aPrefix + StringUtils.removeStart(file, "/") : null;
+                String bName = hasB ? bPrefix + StringUtils.removeStart(file, "/") : null;
+                List<String> aLines = hasA ? aFunc.apply(file) : Collections.emptyList();
+                List<String> bLines = hasB ? bFunc.apply(file) : Collections.emptyList();
                 List<String> patchLines = doDiff(summary, aName, bName, aLines, bLines, context, autoHeader);
                 if (!patchLines.isEmpty()) {
-                    summary.changedFiles++;
-                    patches.consume(file + ".patch", patchLines);
-                } else {
-                    summary.unchangedFiles++;
+                	allPatchLines.addAll(patchLines);
+            		patches.consume(file + ".patch", patchLines);
                 }
             } catch (IOException e) {
                 verbose("Failed to read file: %s", file);
             }
         }
-        for (String file : removed) {
-            try {
-                String aName = aPrefix + StringUtils.removeStart(file, "/");
-                List<String> aLines = aFunc.apply(file);
-                List<String> bLines = Collections.emptyList();
-                List<String> patchLines = doDiff(summary, aName, null, aLines, bLines, context, autoHeader);
-                if (!patchLines.isEmpty()) {
-                    summary.removedFiles++;
-                    patches.consume(file + ".patch", patchLines);
-                } else {
-                    summary.unchangedFiles++;
-                }
-            } catch (IOException e) {
-                verbose("Failed to read file: %s", file);
-            }
-        }
+        return allPatchLines;
     }
 
     public List<String> doDiff(DiffSummary summary, String aName, String bName, List<String> aLines, List<String> bLines, int context, boolean autoHeader) {
@@ -174,15 +153,19 @@ public class DiffOperation {
             patchFile.patches = Collections.emptyList();
         } else if (aLines.isEmpty()) {
             patchFile.patches = Differ.makeFileAdded(bLines);
+            summary.addedFiles++;
         } else if (bLines.isEmpty()) {
             patchFile.patches = Differ.makeFileRemoved(aLines);
+            summary.removedFiles++;
         } else {
             patchFile.patches = differ.makePatches(aLines, bLines, context, true);
         }
         if (patchFile.patches.isEmpty()) {
             verbose("%s -> %s\n No changes.", aName, bName);
+            summary.unchangedFiles++;
             return Collections.emptyList();
         }
+        summary.changedFiles++;
         long added = patchFile.patches.stream()//
                 .flatMap(e -> e.diffs.stream())//
                 .filter(e -> e.op == Operation.INSERT)//
@@ -214,9 +197,9 @@ public class DiffOperation {
         public void print(PrintStream logger, boolean slim) {
             logger.println("Diff Summary:");
             if (!slim) {
-                logger.println(" UnChanged files: " + unchangedFiles);
-                logger.println(" Added files:     " + addedFiles);
+                logger.println(" Unchanged files: " + unchangedFiles);
                 logger.println(" Changed files:   " + changedFiles);
+                logger.println(" Added files:     " + addedFiles);
                 logger.println(" Removed files:   " + removedFiles);
             }
 
@@ -225,9 +208,9 @@ public class DiffOperation {
         }
     }
     
-    private void verbose(Object... s) {
+    private void verbose(String str, Object... args) {
     	if(verbose) {
-    		System.out.println(s);
+    		System.out.println(String.format(str, args));
     	}
     }
 
@@ -241,8 +224,26 @@ public class DiffOperation {
         private OutputPath outputPath;
         private String aPrefix = "a/";
         private String bPrefix = "b/";
+    	private PathFilter filter = p -> true;
+        private String lineSeparator = System.lineSeparator();
+        private boolean single;
 
         private Builder() {
+        }
+
+        public Builder filter(PathFilter filter) {
+        	this.filter = filter;
+        	return this;
+        }
+
+        public Builder singleDiff(boolean single) {
+        	this.single = single;
+        	return this;
+        }
+
+        public Builder lineSeparator(String lineSeparator) {
+        	this.lineSeparator = Objects.requireNonNull(lineSeparator);
+        	return this;
         }
 
         public Builder verbose(boolean verbose) {
@@ -327,7 +328,7 @@ public class DiffOperation {
             if (outputPath == null) {
                 throw new IllegalStateException("output not set.");
             }
-            return new DiffOperation(verbose, aPath, bPath, aPrefix, bPrefix, autoHeader, context, outputPath);
+            return new DiffOperation(verbose, aPath, bPath, aPrefix, bPrefix, autoHeader, context, outputPath, filter, lineSeparator, single);
         }
 
     }

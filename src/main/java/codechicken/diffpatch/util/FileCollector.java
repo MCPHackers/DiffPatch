@@ -2,22 +2,33 @@ package codechicken.diffpatch.util;
 
 import java.util.*;
 
+import static codechicken.diffpatch.util.Utils.DEV_NULL;
+
 /**
  * Created by covers1624 on 11/8/20.
  */
 public class FileCollector {
 
     private final Map<String, List<String>> files = new HashMap<>();
+    private final List<String> removedFiles = new ArrayList<>();
 
     /**
      * Adds a List of lines to the collector.
      *
      * @param name  The file name.
      * @param lines The lines in the file.
-     * @return Returns true if lines were added.
      */
-    public boolean consume(String name, List<String> lines) {
-        return files.put(name, Collections.unmodifiableList(lines)) == null;
+    public void consume(String name, List<String> lines) {
+    	if(lines == null || DEV_NULL.equals(name)) {
+    		removedFiles.add(name);
+    		return;
+    	}
+    	removedFiles.remove(name);
+        files.put(name, Collections.unmodifiableList(lines));
+    }
+    
+    public List<String> getRemoved() {
+    	return Collections.unmodifiableList(removedFiles);
     }
 
     public Map<String, List<String>> get() {

@@ -47,10 +47,9 @@ public class PatchOperation {
     private final float minFuzz;
     private final int maxOffset;
     private final PatchMode mode;
-    private final PathFilter filter;
     private final String lineSeparator;
 
-    public PatchOperation(boolean verbose, InputPath basePath, InputPath patchesPath, String aPrefix, String bPrefix, OutputPath outputPath, OutputPath rejectsPath, float minFuzz, int maxOffset, PatchMode mode, PathFilter filter, String lineSeparator) {
+    public PatchOperation(boolean verbose, InputPath basePath, InputPath patchesPath, String aPrefix, String bPrefix, OutputPath outputPath, OutputPath rejectsPath, float minFuzz, int maxOffset, PatchMode mode, String lineSeparator) {
         this.verbose = verbose;
         this.basePath = basePath;
         this.patchesPath = patchesPath;
@@ -61,7 +60,6 @@ public class PatchOperation {
         this.minFuzz = minFuzz;
         this.maxOffset = maxOffset;
         this.mode = mode;
-        this.filter = filter;
         this.lineSeparator = lineSeparator;
     }
 
@@ -161,9 +159,6 @@ public class PatchOperation {
         //TODO add summary and rejects
         for (PatchFile patch : patchFiles) {
         	String basePath = patch.getBasePath(aPrefix);
-        	if(!filter.apply(basePath)) {
-        		continue;
-        	}
         	try {
         		if(!DEV_NULL.equals(basePath) && !bEntries.contains(basePath)) {
         			summary.missingFiles++;
@@ -231,7 +226,7 @@ public class PatchOperation {
                 lines.add("");
             }
         }
-        outputCollector.consume(patchFile.getBasePath(aPrefix), null);
+        outputCollector.remove(patchFile.getBasePath(aPrefix));
         outputCollector.consume(patchFile.getPatchedPath(bPrefix), lines);
         if (!rejectLines.isEmpty()) {
             rejectCollector.consume(patchFile.name + ".rej", rejectLines);
@@ -295,18 +290,12 @@ public class PatchOperation {
         private float minFuzz = FuzzyLineMatcher.DEFAULT_MIN_MATCH_SCORE;
         private int maxOffset = FuzzyLineMatcher.MatchMatrix.DEFAULT_MAX_OFFSET;
         private PatchMode mode = PatchMode.EXACT;
-        private PathFilter filter = p -> true;
         private String lineSeparator = System.lineSeparator();
 
         private String aPrefix = "a/";
         private String bPrefix = "b/";
 
         private Builder() {
-        }
-
-        public Builder filter(PathFilter filter) {
-        	this.filter = filter;
-        	return this;
         }
         
         public Builder lineSeparator(String lineSeparator) {
@@ -408,7 +397,7 @@ public class PatchOperation {
             if (outputPath == null) {
                 throw new IllegalStateException("output not set.");
             }
-            return new PatchOperation(verbose, basePath, patchesPath, aPrefix, bPrefix, outputPath, rejectsPath, minFuzz, maxOffset, mode, filter, lineSeparator);
+            return new PatchOperation(verbose, basePath, patchesPath, aPrefix, bPrefix, outputPath, rejectsPath, minFuzz, maxOffset, mode, lineSeparator);
         }
 
     }

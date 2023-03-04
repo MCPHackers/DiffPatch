@@ -19,12 +19,18 @@ public class FileCollector {
      * @param lines The lines in the file.
      */
     public void consume(String name, List<String> lines) {
-    	if(lines == null || DEV_NULL.equals(name)) {
-    		removedFiles.add(name);
+    	if(DEV_NULL.equals(name)) {
     		return;
     	}
     	removedFiles.remove(name);
         files.put(name, Collections.unmodifiableList(lines));
+    }
+    
+    public void remove(String name) {
+    	if(DEV_NULL.equals(name)) {
+    		return;
+    	}
+		removedFiles.add(name);
     }
     
     public List<String> getRemoved() {

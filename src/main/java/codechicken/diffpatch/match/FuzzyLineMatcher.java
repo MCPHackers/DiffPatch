@@ -1,8 +1,8 @@
 package codechicken.diffpatch.match;
 
 import codechicken.diffpatch.util.LineRange;
-import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.commons.lang3.tuple.Pair;
+import codechicken.diffpatch.util.MutablePair;
+import codechicken.diffpatch.util.Pair;
 
 import java.util.Arrays;
 import java.util.List;

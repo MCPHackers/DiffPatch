@@ -2,7 +2,6 @@ package codechicken.diffpatch.patch;
 
 import codechicken.diffpatch.match.FuzzyLineMatcher;
 import codechicken.diffpatch.util.*;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;

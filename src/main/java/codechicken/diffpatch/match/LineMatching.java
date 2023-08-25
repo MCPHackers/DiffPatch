@@ -1,10 +1,6 @@
 package codechicken.diffpatch.match;
 
-import codechicken.diffpatch.util.Diff;
-import codechicken.diffpatch.util.LineRange;
-import codechicken.diffpatch.util.Operation;
-import codechicken.diffpatch.util.Patch;
-import org.apache.commons.lang3.tuple.Pair;
+import codechicken.diffpatch.util.*;
 
 import java.util.ArrayList;
 import java.util.List;

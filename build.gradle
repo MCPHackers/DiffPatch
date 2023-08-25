@@ -1,18 +1,12 @@
-import com.github.jengelman.gradle.plugins.shadow.transformers.PropertiesFileTransformer
-
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'com.github.johnrengelman.shadow' version '5.2.0'
-    id "net.covers1624.signing" version '1.0.0.2'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group 'codechicken'
 archivesBaseName = 'DiffPatch'
 version '1.2.5'
-
-targetCompatibility = "1.8"
-sourceCompatibility = "1.8"
 
 def signProps = [:]
 if (System.getenv("KEY_STORE")) {
@@ -38,7 +32,6 @@ println "Starting build of ${archivesBaseName}, Version: ${version}"
 
 repositories {
     mavenLocal()
-    jcenter()
     mavenCentral()
 }
 
@@ -54,12 +47,16 @@ configurations {
 }
 
 dependencies {
-    shadow 'org.apache.commons:commons-lang3:3.12.0'
     gradleImplementation sourceSets.main.output
     gradleCompileOnly gradleApi()
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+}
+
+java {
+    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_1_8
 }
 
 test {
@@ -91,8 +88,8 @@ shadowJar {
     relocate 'org.apache', 'codechicken.repack.org.apache'
 }
 
-task srcJar(type: Jar) {
-    classifier 'sources'
+tasks.register('srcJar', Jar) {
+    archiveClassifier = 'sources'
     from sourceSets.main.allSource
     from file("LICENSE.txt")
 }

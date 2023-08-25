@@ -18,17 +18,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
-
 import codechicken.diffpatch.diff.Differ;
 import codechicken.diffpatch.diff.PatienceDiffer;
-import codechicken.diffpatch.util.FileCollector;
-import codechicken.diffpatch.util.InputPath;
-import codechicken.diffpatch.util.LinesReader;
-import codechicken.diffpatch.util.Operation;
-import codechicken.diffpatch.util.OutputPath;
-import codechicken.diffpatch.util.PatchFile;
-import codechicken.diffpatch.util.Utils;
+import codechicken.diffpatch.util.*;
 
 /**
  * Handles doing a Diff operation from the CLI.
